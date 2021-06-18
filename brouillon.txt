@@ -1,0 +1,96 @@
+int initialisationSocketUDP(char *service)
+{
+    struct addrinfo precisions, *resultat, *origine;
+    int statut;
+    int s;
+
+    /* Construction de la structure adresse */
+    memset(&precisions, 0, sizeof precisions);
+
+    precisions.ai_family = AF_UNSPEC;
+    precisions.ai_socktype = SOCK_DGRAM;
+    precisions.ai_flags = AI_PASSIVE;
+
+    statut = getaddrinfo(NULL, service, &precisions, &origine);
+    if (statut < 0)
+    {
+        perror("initialisationSocketUDP.getaddrinfo");
+        exit(EXIT_FAILURE);
+    }
+
+    struct addrinfo *p;
+
+    for (p = origine, resultat = origine; p != NULL; p = p->ai_next)
+        if (p->ai_family == AF_INET6)
+        {
+            resultat = p;
+            break;
+        }
+
+    /* Creation d'une socket */
+    s = socket(resultat->ai_family, resultat->ai_socktype, resultat->ai_protocol);
+    if (s < 0)
+    {
+        perror("initialisationSocketUDP.socket");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Options utiles */
+    int vrai = 1;
+    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &vrai, sizeof(vrai)) < 0)
+    {
+        perror("initialisationServeurUDPgenerique.setsockopt (REUSEADDR)");
+        exit(-1);
+    }
+
+    /* Specification de l'adresse de la socket */
+    statut = bind(s, resultat->ai_addr, resultat->ai_addrlen);
+    if (statut < 0)
+    {
+        perror("initialisationServeurUDP.bind");
+        exit(-1);
+    }
+
+    /* Liberation de la structure d'informations */
+    freeaddrinfo(origine);
+
+    return s;
+}
+
+
+
+void destructionSocket(int s, void *handle)
+{
+    /* Fermeture de la socket d'envoi */
+    free(handle);
+    close(s);
+}
+
+int boucleServeurUDP(int s, int (*traitement)(unsigned char *, int))
+{
+    while (1)
+    {
+        struct sockaddr_storage adresse;
+        socklen_t taille = sizeof(adresse);
+        unsigned char message[MAX_UDP_MESSAGE];
+        int nboctets = recvfrom(s, message, MAX_UDP_MESSAGE, 0, (struct sockaddr *)&adresse, &taille);
+        if (nboctets < 0)
+            return -1;
+        if (traitement(message, nboctets) < 0)
+            break;
+    }
+    return 0;
+}
+
+/* PROTOCOLE TCP */
+
+	pthread_t tid1;
+	//int arg = 0;
+	//void *handle;
+	//str->handle = handle;
+	//struct_message *str = NULL;
+	//str->fonction = (void *)messageUDP;
+	//str->taille = MAX_UDP_MESSAGE;
+	//str->message = message;
+	//int s =
+	//str->s = creationSocketUDP("0.0.0.0", "1338", &handle);
